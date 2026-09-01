@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<title>Kasatria People Table</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		html, body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: Helvetica, Arial, sans-serif; }
+
+		a { color: #8ff; }
+
+		/* ---------- Login gate ---------- */
+		#login-screen {
+			position: fixed;
+			inset: 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 24px;
+			background: radial-gradient(circle at center, #061014 0%, #000 70%);
+			z-index: 20;
+		}
+		#login-screen h1 {
+			color: rgba(200,255,255,0.9);
+			text-shadow: 0 0 12px rgba(0,255,255,0.6);
+			font-weight: 300;
+			letter-spacing: 2px;
+			margin: 0;
+		}
+		#login-screen p {
+			color: rgba(160,220,220,0.6);
+			font-size: 13px;
+			max-width: 320px;
+			text-align: center;
+			margin: 0;
+		}
+		#login-error {
+			color: #ff8080;
+			font-size: 12px;
+			min-height: 16px;
+		}
+
+		/* ---------- App ---------- */
+		#app { display: none; }
+
+		#info {
+			position: absolute;
+			top: 10px;
+			width: 100%;
+			text-align: center;
+			color: rgba(200,255,255,0.6);
+			font-size: 12px;
+			z-index: 5;
+		}
+
+		#user-badge {
+			position: absolute;
+			top: 10px;
+			right: 16px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			color: rgba(200,255,255,0.8);
+			font-size: 12px;
+			z-index: 6;
+		}
+		#user-badge img { width: 24px; height: 24px; border-radius: 50%; }
+		#user-badge button {
+			background: transparent;
+			border: 1px solid rgba(127,255,255,0.4);
+			color: rgba(200,255,255,0.8);
+			font-size: 11px;
+			padding: 3px 8px;
+			cursor: pointer;
+		}
+
+		#menu {
+			position: absolute;
+			bottom: 20px;
+			width: 100%;
+			text-align: center;
+			z-index: 5;
+		}
+
+		#legend {
+			position: absolute;
+			bottom: 60px;
+			width: 100%;
+			text-align: center;
+			z-index: 5;
+			font-size: 11px;
+			color: rgba(200,255,255,0.7);
+		}
+		#legend span { margin: 0 10px; }
+		#legend .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
+
+		#loading {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: rgba(200,255,255,0.8);
+			font-size: 13px;
+			z-index: 4;
+		}
+
+		.element {
+			width: 160px;
+			height: 200px;
+			box-shadow: 0px 0px 12px rgba(0,255,255,0.35);
+			border: 1px solid rgba(127,255,255,0.25);
+			text-align: center;
+			line-height: normal;
+			cursor: default;
+			border-radius: 4px;
+			overflow: hidden;
+		}
+
+		.element:hover {
+			box-shadow: 0px 0px 16px rgba(0,255,255,0.75);
+			border: 1px solid rgba(127,255,255,0.75);
+		}
+
+		.element .photo {
+			width: 100%;
+			height: 100px;
+			background-size: cover;
+			background-position: center top;
+			background-color: rgba(0,0,0,0.4);
+		}
+
+		.element .name {
+			margin-top: 6px;
+			font-size: 13px;
+			font-weight: bold;
+			color: rgba(255,255,255,0.9);
+			padding: 0 6px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.element .details {
+			margin-top: 4px;
+			font-size: 10px;
+			color: rgba(255,255,255,0.75);
+			line-height: 1.5;
+		}
+
+		.element .networth {
+			margin-top: 4px;
+			font-size: 11px;
+			font-weight: bold;
+		}
+
+		button {
+			color: rgba(127,255,255,0.75);
+			background: transparent;
+			outline: 1px solid rgba(127,255,255,0.75);
+			border: 0px;
+			padding: 5px 10px;
+			cursor: pointer;
+		}
+		button:hover { background-color: rgba(0,255,255,0.5); }
+		button:active { color: #000000; background-color: rgba(0,255,255,0.75); }
+	</style>
+</head>
+<body>
+
+	<!-- ============================================================
+	     LOGIN GATE (Requirement #2 - Sign in with Google)
+	     ============================================================ -->
+	<div id="login-screen">
+		<h1>Kasatria People Table</h1>
+		<p>Sign in with your Google account to continue.</p>
+		<div id="g_id_signin"></div>
+		<div id="login-error"></div>
+	</div>
+
+	<!-- ============================================================
+	     MAIN APP
+	     ============================================================ -->
+	<div id="app">
+		<div id="info">Kasatria People Table &mdash; drag to orbit, scroll to zoom</div>
+		<div id="user-badge"></div>
+		<div id="loading">Loading data from Google Sheet&hellip;</div>
+		<div id="container"></div>
+		<div id="legend">
+			<span><i class="swatch" style="background:#EF3022"></i>&lt; $100K</span>
+			<span><i class="swatch" style="background:#F2A93B"></i>&gt; $100K</span>
+			<span><i class="swatch" style="background:#3A9F48"></i>&gt; $200K</span>
+		</div>
+		<div id="menu">
+			<button id="table">TABLE</button>
+			<button id="sphere">SPHERE</button>
+			<button id="helix">HELIX</button>
+			<button id="grid">GRID</button>
+		</div>
+	</div>
+
+	<!-- ============================================================
+	     CONFIG — fill these in before deploying
+	     ============================================================ -->
+	<script>
+		window.APP_CONFIG = {
+			// Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client ID (Web application)
+			GOOGLE_CLIENT_ID: '798826475532-6gtm9mikp9851ku4q2lkeos8tvneur80.apps.googleusercontent.com',
+
+			// 'api-key' = read the Sheet directly with a public API key (Sheet must be link-viewable).
+			// 'backend' = read the Sheet through api/sheet-data.js using a service account (Sheet stays private).
+			DATA_SOURCE: 'api-key',
+
+			// --- used when DATA_SOURCE = 'api-key' ---
+			// Google Cloud Console > Credentials > API key (restrict to Google Sheets API + your domain)
+			SHEETS_API_KEY: 'AIzaSyDaTu1MulRV8v8aid1D0J4fRqSXHTtYH6A',
+			// The long id in your Google Sheet's URL: docs.google.com/spreadsheets/d/<THIS PART>/edit
+			SHEET_ID: '1aZ2FQ3efj_oubyLQSCHoSKg-NaE6MbO3FBHeCSwhFjg',
+			// Tab name + range. Must match the header row order: Name, Photo, Age, Country, Interest, Net Worth
+			// A2:F201 skips the header row and covers the 200 data rows from Data_Template.csv
+			SHEET_RANGE: 'Sheet1!A2:F201',
+
+			// --- used when DATA_SOURCE = 'backend' ---
+			BACKEND_ENDPOINT: '/api/sheet-data'
+		};
+	</script>
+
+	<!-- Google Identity Services (Sign in with Google) -->
+	<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+	<script type="importmap">
+		{
+			"imports": {
+				"three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+				"three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+			}
+		}
+	</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+		import TWEEN from 'three/addons/libs/tween.module.js';
+		import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+		import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+
+		const CONFIG = window.APP_CONFIG;
+
+		// ============================================================
+		// REQUIREMENT #2 — Sign in with Google (login gate)
+		// ============================================================
+		// NOTE: decoding the ID token client-side is fine for this
+		// assignment (we only use it to gate the UI). In a production
+		// app you would verify the token on a backend before trusting it.
+		window.onload = () => {
+			if (!window.google) {
+				document.getElementById('login-error').textContent =
+					'Google Identity script failed to load. Check your connection.';
+				return;
+			}
+			google.accounts.id.initialize({
+				client_id: CONFIG.GOOGLE_CLIENT_ID,
+				callback: handleCredentialResponse
+			});
+			google.accounts.id.renderButton(
+				document.getElementById('g_id_signin'),
+				{ theme: 'filled_blue', size: 'large', shape: 'pill' }
+			);
+			google.accounts.id.prompt();
+		};
+
+		function decodeJwt(token) {
+			const payload = token.split('.')[1];
+			return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+		}
+
+		function handleCredentialResponse(response) {
+			try {
+				const profile = decodeJwt(response.credential);
+				showApp(profile);
+			} catch (err) {
+				document.getElementById('login-error').textContent = 'Sign-in failed. Please try again.';
+				console.error(err);
+			}
+		}
+
+		function showApp(profile) {
+			document.getElementById('login-screen').style.display = 'none';
+			document.getElementById('app').style.display = 'block';
+
+			const badge = document.getElementById('user-badge');
+			badge.innerHTML = '';
+			const img = document.createElement('img');
+			img.src = profile.picture;
+			const name = document.createElement('span');
+			name.textContent = profile.name || profile.email;
+			const signOut = document.createElement('button');
+			signOut.textContent = 'Sign out';
+			signOut.onclick = () => window.location.reload();
+			badge.appendChild(img);
+			badge.appendChild(name);
+			badge.appendChild(signOut);
+
+			initTable();
+		}
+
+		// ============================================================
+		// REQUIREMENT #1/#3 — Retrieve data from the Google Sheet
+		// ============================================================
+		// Two supported modes, controlled by CONFIG.DATA_SOURCE:
+		//   'api-key'  -> calls Sheets API directly with a public API key.
+		//                 Simple, but requires the Sheet to be link-viewable.
+		//   'backend'  -> calls our own serverless function (see api/sheet-data.js),
+		//                 which uses a service account to read a PRIVATE sheet.
+		//                 The private key never reaches the browser.
+		async function fetchSheetData() {
+			if (CONFIG.DATA_SOURCE === 'backend') {
+				const res = await fetch(CONFIG.BACKEND_ENDPOINT);
+				if (!res.ok) {
+					throw new Error(`Backend error ${res.status}: ${await res.text()}`);
+				}
+				return res.json(); // already shaped as [{name, photo, age, country, interest, netWorth}, ...]
+			}
+
+			const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(CONFIG.SHEET_RANGE)}?key=${CONFIG.SHEETS_API_KEY}`;
+			const res = await fetch(url);
+			if (!res.ok) {
+				throw new Error(`Sheets API error ${res.status}: ${await res.text()}`);
+			}
+			const json = await res.json();
+			const rows = json.values || [];
+
+			// Columns from Data_Template.csv: Name, Photo, Age, Country, Interest, Net Worth
+			return rows.map(row => {
+				const [name, photo, age, country, interest, netWorthRaw] = row;
+				const netWorth = parseFloat((netWorthRaw || '0').replace(/[$,]/g, '')) || 0;
+				return { name, photo, age, country, interest, netWorth };
+			});
+		}
+
+		// ============================================================
+		// REQUIREMENT #5 — Colour by Net Worth
+		// Red < $100K | Orange > $100K | Green > $200K
+		// ============================================================
+		function netWorthColor(value) {
+			if (value > 200000) return { css: '#3A9F48', bg: 'rgba(58,159,72,0.35)' };
+			if (value > 100000) return { css: '#F2A93B', bg: 'rgba(242,169,59,0.35)' };
+			return { css: '#EF3022', bg: 'rgba(239,48,34,0.35)' };
+		}
+
+		function formatMoney(value) {
+			return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+		}
+
+		let camera, scene, renderer, controls;
+		const objects = [];
+		const targets = { table: [], sphere: [], helix: [], grid: [] };
+
+		async function initTable() {
+			let people;
+			try {
+				people = await fetchSheetData();
+			} catch (err) {
+				document.getElementById('loading').textContent =
+					'Could not load data from Google Sheet. Check CONFIG at the top of index.html.';
+				console.error(err);
+				return;
+			}
+			document.getElementById('loading').style.display = 'none';
+
+			init(people);
+			animate();
+		}
+
+		function init(people) {
+
+			camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+			camera.position.z = 3000;
+
+			scene = new THREE.Scene();
+
+			const n = people.length;
+
+			people.forEach((person, i) => {
+
+				const color = netWorthColor(person.netWorth);
+
+				const element = document.createElement('div');
+				element.className = 'element';
+				element.style.backgroundColor = color.bg;
+				element.style.borderColor = color.css;
+
+				const photo = document.createElement('div');
+				photo.className = 'photo';
+				if (person.photo) photo.style.backgroundImage = `url(${person.photo})`;
+				element.appendChild(photo);
+
+				const nameEl = document.createElement('div');
+				nameEl.className = 'name';
+				nameEl.textContent = person.name || '';
+				element.appendChild(nameEl);
+
+				const details = document.createElement('div');
+				details.className = 'details';
+				details.innerHTML = `${person.age || ''} &middot; ${person.country || ''}<br>${person.interest || ''}`;
+				element.appendChild(details);
+
+				const networth = document.createElement('div');
+				networth.className = 'networth';
+				networth.style.color = color.css;
+				networth.textContent = formatMoney(person.netWorth);
+				element.appendChild(networth);
+
+				const objectCSS = new CSS3DObject(element);
+				objectCSS.position.x = Math.random() * 4000 - 2000;
+				objectCSS.position.y = Math.random() * 4000 - 2000;
+				objectCSS.position.z = Math.random() * 4000 - 2000;
+				scene.add(objectCSS);
+				objects.push(objectCSS);
+
+				// ----------------------------------------------------
+				// REQUIREMENT #6/#7 — Table layout, fixed at 20 x 10
+				// ----------------------------------------------------
+				const cols = 20, rows = 10;
+				const col = i % cols;
+				const row = Math.floor(i / cols);
+				const tableObj = new THREE.Object3D();
+				tableObj.position.x = (col * 180) - ((cols - 1) * 180) / 2;
+				tableObj.position.y = -(row * 220) + ((rows - 1) * 220) / 2;
+				targets.table.push(tableObj);
+
+			});
+
+			// ----------------------------------------------------
+			// REQUIREMENT #6 — Sphere layout
+			// ----------------------------------------------------
+			const vector = new THREE.Vector3();
+			for (let i = 0, l = objects.length; i < l; i++) {
+				const phi = Math.acos(-1 + (2 * i) / l);
+				const theta = Math.sqrt(l * Math.PI) * phi;
+				const object = new THREE.Object3D();
+				object.position.setFromSphericalCoords(1200, phi, theta);
+				vector.copy(object.position).multiplyScalar(2);
+				object.lookAt(vector);
+				targets.sphere.push(object);
+			}
+
+			// ----------------------------------------------------
+			// REQUIREMENT #6/#8 — DOUBLE Helix layout
+			// Two strands 180deg apart, sharing the same vertical pitch.
+			// ----------------------------------------------------
+			{
+				const pairs = Math.ceil(n / 2);
+				for (let i = 0; i < n; i++) {
+					const pairIndex = Math.floor(i / 2);
+					const strand = i % 2; // 0 = strand A, 1 = strand B
+					const theta = pairIndex * 0.35 + Math.PI + (strand === 1 ? Math.PI : 0);
+					const y = -(pairIndex * 9) + (pairs * 9) / 2;
+
+					const object = new THREE.Object3D();
+					object.position.setFromCylindricalCoords(900, theta, y);
+
+					vector.x = object.position.x * 2;
+					vector.y = object.position.y;
+					vector.z = object.position.z * 2;
+					object.lookAt(vector);
+
+					targets.helix.push(object);
+				}
+			}
+
+			// ----------------------------------------------------
+			// REQUIREMENT #6/#9 — Grid layout, fixed at 5 x 4 x 10
+			// ----------------------------------------------------
+			{
+				const gx = 5, gy = 4;
+				for (let i = 0; i < objects.length; i++) {
+					const object = new THREE.Object3D();
+					object.position.x = ((i % gx) * 400) - ((gx - 1) * 400) / 2;
+					object.position.y = -(Math.floor(i / gx) % gy) * 400 + ((gy - 1) * 400) / 2;
+					object.position.z = Math.floor(i / (gx * gy)) * 700 - 3150;
+					targets.grid.push(object);
+				}
+			}
+
+			renderer = new CSS3DRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.getElementById('container').appendChild(renderer.domElement);
+
+			controls = new TrackballControls(camera, renderer.domElement);
+			controls.minDistance = 500;
+			controls.maxDistance = 8000;
+			controls.addEventListener('change', render);
+
+			document.getElementById('table').addEventListener('click', () => transform(targets.table, 2000));
+			document.getElementById('sphere').addEventListener('click', () => transform(targets.sphere, 2000));
+			document.getElementById('helix').addEventListener('click', () => transform(targets.helix, 2000));
+			document.getElementById('grid').addEventListener('click', () => transform(targets.grid, 2000));
+
+			transform(targets.table, 2000);
+
+			window.addEventListener('resize', onWindowResize);
+		}
+
+		function transform(newTargets, duration) {
+			TWEEN.removeAll();
+			for (let i = 0; i < objects.length; i++) {
+				const object = objects[i];
+				const target = newTargets[i];
+
+				new TWEEN.Tween(object.position)
+					.to({ x: target.position.x, y: target.position.y, z: target.position.z }, Math.random() * duration + duration)
+					.easing(TWEEN.Easing.Exponential.InOut)
+					.start();
+
+				new TWEEN.Tween(object.rotation)
+					.to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration)
+					.easing(TWEEN.Easing.Exponential.InOut)
+					.start();
+			}
+			new TWEEN.Tween(this).to({}, duration * 2).onUpdate(render).start();
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			render();
+		}
+
+		function animate() {
+			requestAnimationFrame(animate);
+			TWEEN.update();
+			controls.update();
+		}
+
+		function render() {
+			renderer.render(scene, camera);
+		}
+
+	</script>
+</body>
+</html>
